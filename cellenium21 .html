@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Cellenium21 Hematology Analyzer</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Segoe UI',sans-serif;background:#f0f4f8;color:#1a202c;min-height:100vh;display:flex}
+.sidebar{width:300px;min-width:300px;background:linear-gradient(160deg,#1a365d 0%,#2b6cb0 100%);color:#fff;display:flex;flex-direction:column;transition:width .3s;overflow:hidden}
+.sidebar.collapsed{width:52px;min-width:52px}
+.sidebar-header{padding:16px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,.15);flex-shrink:0}
+.logo{width:34px;height:34px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.logo-text{font-size:14px;font-weight:700;white-space:nowrap}
+.logo-sub{font-size:10px;color:rgba(255,255,255,.6);white-space:nowrap}
+.toggle-btn{margin-left:auto;background:none;border:none;color:#fff;cursor:pointer;font-size:20px;padding:4px;flex-shrink:0}
+.nav{padding:10px 8px;flex-shrink:0}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:8px;cursor:pointer;transition:background .2s;white-space:nowrap}
+.nav-item:hover{background:rgba(255,255,255,.12)}
+.nav-item.active{background:rgba(255,255,255,.2)}
+.nav-item i{font-size:19px;flex-shrink:0}
+.nav-label{font-size:13px;font-weight:500}
+.about-panel{flex:1;overflow-y:auto;padding:0 12px 16px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent}
+.about-panel::-webkit-scrollbar{width:4px}
+.about-panel::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:4px}
+.about-section{margin-bottom:12px}
+.about-section-title{font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:rgba(255,255,255,.5);margin-bottom:6px;padding-left:4px}
+.about-card{background:rgba(255,255,255,.08);border-radius:10px;padding:12px;margin-bottom:8px}
+.about-card p{font-size:11.5px;color:rgba(255,255,255,.85);line-height:1.6}
+.spec-row{display:flex;justify-content:space-between;font-size:11px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.spec-row:last-child{border:none}
+.spec-label{color:rgba(255,255,255,.55)}
+.spec-val{color:#63b3ed;font-weight:600}
+.param-ref{background:rgba(255,255,255,.06);border-radius:8px;padding:10px;margin-bottom:6px}
+.param-ref-name{font-size:12px;font-weight:700;color:#90cdf4;margin-bottom:3px}
+.param-ref-desc{font-size:11px;color:rgba(255,255,255,.75);line-height:1.5;margin-bottom:5px}
+.param-ref-tags{display:flex;gap:4px;flex-wrap:wrap}
+.tag{font-size:10px;padding:2px 7px;border-radius:12px;font-weight:600}
+.tag.low{background:rgba(252,129,129,.2);color:#fc8181}
+.tag.high{background:rgba(246,173,85,.2);color:#f6ad55}
+.collapsed .about-panel,.collapsed .nav-label,.collapsed .logo-text,.collapsed .logo-sub{display:none}
+.collapsed .nav-item{justify-content:center}
+.main{flex:1;overflow-y:auto;padding:20px 24px}
+.page-header{margin-bottom:20px}
+.page-header h1{font-size:21px;font-weight:700;color:#1a365d;display:flex;align-items:center;gap:8px}
+.page-header p{font-size:13px;color:#718096;margin-top:4px}
+.section-card{background:#fff;border-radius:14px;padding:18px 20px;margin-bottom:18px;box-shadow:0 1px 4px rgba(0,0,0,.06)}
+.section-title{font-size:12px;font-weight:700;color:#2b6cb0;margin-bottom:14px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.6px}
+.params-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.param-group{display:flex;flex-direction:column;gap:3px}
+.param-label{font-size:11px;font-weight:600;color:#4a5568;text-transform:uppercase;letter-spacing:.3px}
+.param-unit{font-size:10px;color:#a0aec0;font-weight:400}
+.param-input{padding:8px 10px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;color:#1a202c;background:#f7fafc;transition:border .2s}
+.param-input:focus{outline:none;border-color:#3182ce;background:#fff}
+.param-range{font-size:10px;color:#a0aec0}
+.analyze-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:linear-gradient(135deg,#1a365d,#3182ce);color:#fff;border:none;border-radius:10px;padding:12px 32px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;width:100%}
+.analyze-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(49,130,206,.35)}
+.result-section{display:none}
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+.stat-box{background:#f7fafc;border-radius:10px;padding:12px;text-align:center;border:1px solid #e2e8f0}
+.stat-num{font-size:22px;font-weight:700;color:#2b6cb0}
+.stat-lbl{font-size:10px;color:#718096;margin-top:2px}
+.chart-tabs{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.chart-tab{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1.5px solid #e2e8f0;background:#f7fafc;color:#718096;transition:all .2s}
+.chart-tab.active{background:#2b6cb0;color:#fff;border-color:#2b6cb0}
+.chart-wrap{position:relative;width:100%}
+.chart-legend{display:flex;gap:16px;margin-top:10px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:#718096}
+.legend-dot{width:10px;height:10px;border-radius:2px}
+.disease-card{border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid}
+.disease-card.danger{background:#fff5f5;border-color:#fc8181}
+.disease-card.warning{background:#fffaf0;border-color:#f6ad55}
+.disease-card.normal{background:#f0fff4;border-color:#68d391}
+.disease-name{font-size:15px;font-weight:700;margin-bottom:6px}
+.disease-why{font-size:12px;color:#4a5568;line-height:1.65;margin-bottom:10px}
+.prev-list{list-style:none;display:flex;flex-direction:column;gap:5px}
+.prev-list li{display:flex;align-items:flex-start;gap:7px;font-size:12px;color:#2d3748}
+.prev-list li i{color:#3182ce;margin-top:1px;flex-shrink:0;font-size:14px}
+.badge{display:inline-block;font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;text-transform:uppercase;margin-bottom:7px}
+.badge.danger{background:#fed7d7;color:#c53030}
+.badge.warning{background:#feebc8;color:#c05621}
+.badge.normal{background:#c6f6d5;color:#276749}
+.download-btn{display:flex;align-items:center;justify-content:center;gap:8px;background:#fff;color:#2b6cb0;border:2px solid #2b6cb0;border-radius:10px;padding:11px 28px;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;width:100%}
+.download-btn:hover{background:#2b6cb0;color:#fff}
+</style>
+</head>
+<body>
+
+<div class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+        <circle cx="14" cy="14" r="12" fill="#ebf8ff"/>
+        <circle cx="14" cy="14" r="5" fill="#3182ce"/>
+        <circle cx="14" cy="6" r="2.5" fill="#63b3ed"/>
+        <circle cx="14" cy="22" r="2.5" fill="#63b3ed"/>
+        <circle cx="6" cy="14" r="2.5" fill="#63b3ed"/>
+        <circle cx="22" cy="14" r="2.5" fill="#63b3ed"/>
+      </svg>
+    </div>
+    <div>
+      <div class="logo-text">Cellenium21</div>
+      <div class="logo-sub">Trivitron Healthcare</div>
+    </div>
+    <button class="toggle-btn" onclick="toggleSidebar()"><i class="ti ti-menu-2"></i></button>
+  </div>
+
+  <div class="nav">
+    <div class="nav-item active" onclick="toggleAbout(this)"><i class="ti ti-info-circle"></i><span class="nav-label">About & Parameters</span></div>
+    <div class="nav-item" onclick="scrollTo('analyzerSection')"><i class="ti ti-test-pipe"></i><span class="nav-label">Analyzer</span></div>
+    <div class="nav-item" onclick="scrollTo('resultSection')"><i class="ti ti-chart-bar"></i><span class="nav-label">Results</span></div>
+  </div>
+
+  <div class="about-panel" id="aboutPanel">
+    <div class="about-section">
+      <div class="about-section-title">About the Machine</div>
+      <div class="about-card"><p>The <strong>Cellenium21</strong> by Trivitron Healthcare is a fully automated 5-part differential hematology analyzer offering 21 CBC parameters with impedance + optical technology, 60 samples/hr throughput, and only 20µL sample volume.</p></div>
+      <div class="about-card">
+        <div class="spec-row"><span class="spec-label">Parameters</span><span class="spec-val">21</span></div>
+        <div class="spec-row"><span class="spec-label">Throughput</span><span class="spec-val">60 samples/hr</span></div>
+        <div class="spec-row"><span class="spec-label">Sample Volume</span><span class="spec-val">20 µL</span></div>
+        <div class="spec-row"><span class="spec-label">Technology</span><span class="spec-val">Impedance + Optical</span></div>
+        <div class="spec-row"><span class="spec-label">Differential</span><span class="spec-val">5-Part</span></div>
+        <div class="spec-row"><span class="spec-label">Display</span><span class="spec-val">7" Touchscreen</span></div>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <div class="about-section-title">CBC Parameters — What They Mean</div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">WBC — White Blood Cells</div>
+        <div class="param-ref-desc">Measures immune cells that fight infections. Normal: 4.5–11 ×10³/µL</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Leukopenia, Bone marrow failure</span>
+          <span class="tag high">High → Infection, Leukemia</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">RBC — Red Blood Cells</div>
+        <div class="param-ref-desc">Carries oxygen throughout the body. Normal: 4.5–5.5 ×10⁶/µL</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Anemia, Blood loss</span>
+          <span class="tag high">High → Polycythemia, Dehydration</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">HGB — Hemoglobin</div>
+        <div class="param-ref-desc">Oxygen-carrying protein in RBCs. Normal: 12–17 g/dL</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Anemia, Iron deficiency</span>
+          <span class="tag high">High → Polycythemia, Lung disease</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">HCT — Hematocrit</div>
+        <div class="param-ref-desc">% of blood volume occupied by RBCs. Normal: 36–50%</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Anemia, Overhydration</span>
+          <span class="tag high">High → Polycythemia, Dehydration</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">MCV — Mean Corpuscular Volume</div>
+        <div class="param-ref-desc">Average size of RBCs. Normal: 80–100 fL</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Microcytic anemia, Iron deficiency, Thalassemia</span>
+          <span class="tag high">High → Macrocytic anemia, B12/Folate deficiency</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">MCH — Mean Corpuscular Hemoglobin</div>
+        <div class="param-ref-desc">Average hemoglobin per RBC. Normal: 27–33 pg</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Hypochromic anemia, Iron deficiency</span>
+          <span class="tag high">High → Macrocytic anemia, B12 deficiency</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">MCHC — Mean Corpuscular Hgb Concentration</div>
+        <div class="param-ref-desc">Hemoglobin concentration in RBCs. Normal: 32–36 g/dL</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Hypochromic anemia, Thalassemia</span>
+          <span class="tag high">High → Hereditary spherocytosis</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">PLT — Platelets</div>
+        <div class="param-ref-desc">Tiny cells that help blood clot. Normal: 150–400 ×10³/µL</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Thrombocytopenia, Dengue, ITP</span>
+          <span class="tag high">High → Thrombocytosis, Myeloproliferative disorder</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <div class="about-section-title">Differential Parameters</div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">NEU — Neutrophils (50–70%)</div>
+        <div class="param-ref-desc">First responders to bacterial infection.</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Neutropenia, Viral infection</span>
+          <span class="tag high">High → Bacterial infection, Sepsis</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">LYM — Lymphocytes (20–40%)</div>
+        <div class="param-ref-desc">Key cells for immune memory and viral defense.</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Immunodeficiency, HIV</span>
+          <span class="tag high">High → Viral infection, CLL, Lymphoma</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">MON — Monocytes (2–8%)</div>
+        <div class="param-ref-desc">Clean up dead cells and fight chronic infections.</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Bone marrow suppression</span>
+          <span class="tag high">High → Chronic infection, Monocytic leukemia</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">EOS — Eosinophils (1–4%)</div>
+        <div class="param-ref-desc">Responds to allergies and parasitic infections.</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Usually not clinically significant</span>
+          <span class="tag high">High → Asthma, Allergy, Parasitic infection</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">BAS — Basophils (0–1%)</div>
+        <div class="param-ref-desc">Involved in allergic and inflammatory responses.</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Hyperthyroidism, Stress</span>
+          <span class="tag high">High → Allergic reaction, CML</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="about-section">
+      <div class="about-section-title">Additional Indices</div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">RDW — Red Cell Distribution Width (11.5–14.5%)</div>
+        <div class="param-ref-desc">Variation in RBC size — helps differentiate anemia types.</div>
+        <div class="param-ref-tags">
+          <span class="tag high">High → Mixed anemia, Iron + B12 deficiency</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">MPV — Mean Platelet Volume (7.5–12.5 fL)</div>
+        <div class="param-ref-desc">Average size of platelets — indicates platelet production rate.</div>
+        <div class="param-ref-tags">
+          <span class="tag low">Low → Bone marrow failure</span>
+          <span class="tag high">High → ITP, Platelet destruction, Thrombosis risk</span>
+        </div>
+      </div>
+
+      <div class="param-ref">
+        <div class="param-ref-name">PDW — Platelet Distribution Width (9–17%)</div>
+        <div class="param-ref-desc">Variation in platelet size — high PDW indicates platelet activation.</div>
+        <div class="param-ref-tags">
+          <span class="tag high">High → Thrombocytopenia, ITP, Dengue</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="page-header">
+    <h1><i class="ti ti-dna" style="color:#3182ce;font-size:24px"></i> Cellenium21 CBC Analyzer</h1>
+    <p>Enter patient CBC values for automated analysis, disease prediction and downloadable report</p>
+  </div>
+
+  <div class="section-card" id="analyzerSection">
+    <div class="section-title"><i class="ti ti-droplet"></i> CBC Parameters</div>
+    <div class="params-grid" id="paramsGrid"></div>
+  </div>
+  <div class="section-card">
+    <div class="section-title"><i class="ti ti-microscope"></i> Differential Count</div>
+    <div class="params-grid" id="diffGrid"></div>
+  </div>
+  <div class="section-card">
+    <div class="section-title"><i class="ti ti-activity"></i> Additional Indices</div>
+    <div class="params-grid" id="addGrid"></div>
+  </div>
+  <div class="section-card" style="padding:14px">
+    <button class="analyze-btn" onclick="analyze()"><i class="ti ti-brain"></i> Analyze & Predict</button>
+  </div>
+
+  <div id="resultSection" class="result-section">
+    <div class="section-card">
+      <div class="section-title"><i class="ti ti-chart-bar"></i> Parameter Analysis</div>
+      <div class="stat-grid" id="statsRow"></div>
+      <div class="chart-tabs" id="chartTabs"></div>
+      <div class="chart-wrap" id="chartWrap"></div>
+      <div class="chart-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#48bb78"></div>Normal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#fc8181"></div>Below normal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f6ad55"></div>Above normal</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#bee3f8;border:1px solid #90cdf4"></div>Normal range</div>
+      </div>
+    </div>
+
+    <div class="section-card">
+      <div class="section-title"><i class="ti ti-stethoscope"></i> Disease Prediction & Prevention</div>
+      <div id="diagnosisContent"></div>
+    </div>
+
+    <div class="section-card" style="padding:14px">
+      <button class="download-btn" onclick="downloadReport()"><i class="ti ti-download"></i> Download Report (PDF)</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const params=[
+  {id:'wbc',label:'WBC',unit:'×10³/µL',min:4.5,max:11,step:.1},
+  {id:'rbc',label:'RBC',unit:'×10⁶/µL',min:4.5,max:5.5,step:.01},
+  {id:'hgb',label:'Hemoglobin',unit:'g/dL',min:12,max:17,step:.1},
+  {id:'hct',label:'Hematocrit',unit:'%',min:36,max:50,step:.1},
+  {id:'mcv',label:'MCV',unit:'fL',min:80,max:100,step:.1},
+  {id:'mch',label:'MCH',unit:'pg',min:27,max:33,step:.1},
+  {id:'mchc',label:'MCHC',unit:'g/dL',min:32,max:36,step:.1},
+  {id:'plt',label:'Platelets',unit:'×10³/µL',min:150,max:400,step:1},
+];
+const diff=[
+  {id:'neu',label:'Neutrophils',unit:'%',min:50,max:70,step:.1},
+  {id:'lym',label:'Lymphocytes',unit:'%',min:20,max:40,step:.1},
+  {id:'mon',label:'Monocytes',unit:'%',min:2,max:8,step:.1},
+  {id:'eos',label:'Eosinophils',unit:'%',min:1,max:4,step:.1},
+  {id:'bas',label:'Basophils',unit:'%',min:0,max:1,step:.1},
+];
+const addIdx=[
+  {id:'rdw',label:'RDW',unit:'%',min:11.5,max:14.5,step:.1},
+  {id:'mpv',label:'MPV',unit:'fL',min:7.5,max:12.5,step:.1},
+  {id:'pdw',label:'PDW',unit:'%',min:9,max:17,step:.1},
+];
+const groups=[{title:'CBC',data:params},{title:'Differential',data:diff},{title:'Indices',data:addIdx}];
+
+function renderGrid(arr,targetId){
+  document.getElementById(targetId).innerHTML=arr.map(p=>`
+    <div class="param-group">
+      <label class="param-label">${p.label} <span class="param-unit">(${p.unit})</span></label>
+      <input class="param-input" type="number" id="inp_${p.id}" step="${p.step}" placeholder="Enter value"/>
+      <span class="param-range">Ref: ${p.min} – ${p.max}</span>
+    </div>`).join('');
+}
+renderGrid(params,'paramsGrid');
+renderGrid(diff,'diffGrid');
+renderGrid(addIdx,'addGrid');
+
+function getVal(id){return parseFloat(document.getElementById('inp_'+id).value);}
+
+let charts={};
+let activeGroup='CBC';
+
+function analyze(){
+  const all=[...params,...diff,...addIdx];
+  const vals={},status={};
+  for(const p of all){
+    const v=getVal(p.id);
+    vals[p.id]=v;
+    if(!isNaN(v)) status[p.id]=v<p.min?'low':v>p.max?'high':'normal';
+  }
+
+  document.getElementById('resultSection').style.display='block';
+  setTimeout(()=>document.getElementById('resultSection').scrollIntoView({behavior:'smooth'}),100);
+
+  const abnormal=all.filter(p=>status[p.id]==='low'||status[p.id]==='high').length;
+  const low=all.filter(p=>status[p.id]==='low').length;
+  const high=all.filter(p=>status[p.id]==='high').length;
+  const normal=all.filter(p=>status[p.id]==='normal').length;
+  document.getElementById('statsRow').innerHTML=`
+    <div class="stat-box"><div class="stat-num">${all.length}</div><div class="stat-lbl">Total Params</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#38a169">${normal}</div><div class="stat-lbl">Normal</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#e53e3e">${low}</div><div class="stat-lbl">Below Normal</div></div>
+    <div class="stat-box"><div class="stat-num" style="color:#dd6b20">${high}</div><div class="stat-lbl">Above Normal</div></div>`;
+
+  // Tabs
+  const tabsEl=document.getElementById('chartTabs');
+  tabsEl.innerHTML=groups.map(g=>`<div class="chart-tab${g.title===activeGroup?' active':''}" onclick="switchGroup('${g.title}',this)">${g.title}</div>`).join('');
+
+  buildChart(activeGroup,vals,status);
+  renderDiagnosis(predict(vals,status));
+}
+
+function switchGroup(grp,el){
+  activeGroup=grp;
+  document.querySelectorAll('.chart-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  const all=[...params,...diff,...addIdx];
+  const vals={},status={};
+  for(const p of all){const v=getVal(p.id);vals[p.id]=v;if(!isNaN(v))status[p.id]=v<p.min?'low':v>p.max?'high':'normal';}
+  buildChart(grp,vals,status);
+}
+
+function buildChart(grp,vals,status){
+  const grpData=groups.find(g=>g.title===grp).data;
+  const entries=grpData.filter(p=>!isNaN(vals[p.id]));
+  if(!entries.length)return;
+
+  const wrap=document.getElementById('chartWrap');
+  const h=Math.max(320,entries.length*52+80);
+  wrap.innerHTML=`<canvas id="mainChart" role="img" aria-label="${grp} CBC parameter bar chart" style="height:${h}px"></canvas>`;
+
+  if(charts[grp]) charts[grp].destroy();
+
+  const labels=entries.map(p=>p.label);
+  const vals2=entries.map(p=>+vals[p.id].toFixed(2));
+  const colors=entries.map(p=>status[p.id]==='normal'?'#48bb78':status[p.id]==='low'?'#fc8181':'#f6ad55');
+  const minVals=entries.map(p=>p.min);
+  const maxVals=entries.map(p=>p.max);
+
+  charts[grp]=new Chart(document.getElementById('mainChart'),{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {
+          label:'Patient Value',
+          data:vals2,
+          backgroundColor:colors,
+          borderRadius:6,
+          borderSkipped:false,
+          barThickness:22,
+          order:1
+        },
+        {
+          label:'Normal Min',
+          data:minVals,
+          type:'line',
+          borderColor:'rgba(144,205,244,0.6)',
+          backgroundColor:'rgba(190,227,248,0.15)',
+          borderDash:[4,4],
+          borderWidth:1.5,
+          pointRadius:0,
+          fill:false,
+          order:0
+        },
+        {
+          label:'Normal Max',
+          data:maxVals,
+          type:'line',
+          borderColor:'rgba(144,205,244,0.6)',
+          backgroundColor:'rgba(190,227,248,0.15)',
+          borderDash:[4,4],
+          borderWidth:1.5,
+          pointRadius:0,
+          fill:'-1',
+          order:0
+        }
+      ]
+    },
+    options:{
+      indexAxis:'y',
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{display:false},
+        tooltip:{
+          callbacks:{
+            label:ctx=>{
+              if(ctx.datasetIndex!==0)return null;
+              const p=entries[ctx.dataIndex];
+              const s=status[p.id];
+              return ` ${ctx.raw} ${p.unit} (${s.toUpperCase()}) | Ref: ${p.min}–${p.max}`;
+            }
+          }
+        }
+      },
+      scales:{
+        x:{grid:{color:'rgba(0,0,0,.05)'},ticks:{font:{size:11}}},
+        y:{grid:{display:false},ticks:{font:{size:12},color:'#2d3748'}}
+      }
+    }
+  });
+}
+
+function predict(v,s){
+  const d=[];
+  if(!isNaN(v.hgb)&&s.hgb==='low'){
+    const type=(!isNaN(v.mcv)&&v.mcv<80)?'Microcytic Anemia':(!isNaN(v.mcv)&&v.mcv>100)?'Macrocytic Anemia':'Normocytic Anemia';
+    d.push({name:type,severity:'danger',why:[`Hemoglobin ${v.hgb} g/dL is below normal (12–17) — reduced oxygen delivery to tissues`,v.mcv<80?'Low MCV ('+v.mcv+' fL) indicates small RBCs — likely iron deficiency or thalassemia':v.mcv>100?'High MCV ('+v.mcv+' fL) indicates large RBCs — B12 or folate deficiency':'Normal MCV — possible chronic disease anemia or blood loss'],
+    prevention:['Iron-rich diet: spinach, lentils, red meat, fortified cereals','Iron/B12/folate supplements as prescribed','Investigate source of bleeding if applicable','Repeat CBC in 4–6 weeks after treatment','Consult hematologist if Hgb < 8 g/dL']});
+  }
+  if(!isNaN(v.wbc)){
+    if(s.wbc==='high'){
+      d.push({name:'Leukocytosis',severity:'warning',why:[`WBC ${v.wbc} ×10³/µL exceeds normal (4.5–11) — elevated immune cell count`,(!isNaN(v.neu)&&v.neu>70)?'Elevated neutrophils suggest bacterial infection or sepsis':(!isNaN(v.lym)&&v.lym>40)?'Elevated lymphocytes suggest viral infection or lymphoproliferative disorder':'Elevated WBC may indicate stress response, inflammation or malignancy'],
+      prevention:['Blood culture to identify causative organism','CBC with peripheral smear review','Antibiotic or antiviral therapy as prescribed','Avoid NSAIDs without physician guidance','Re-test CBC after 2 weeks of treatment']});
+    } else if(s.wbc==='low'){
+      d.push({name:'Leukopenia',severity:'danger',why:[`WBC ${v.wbc} ×10³/µL is below normal (4.5–11) — reduced immune protection`,`Risk of opportunistic infections; may indicate bone marrow failure, autoimmune disease or viral suppression`],
+      prevention:['Avoid crowded places and infection exposure','Immediate hematology consultation','Bone marrow biopsy if persistent','Nutritional support: zinc, vitamin C, B12','Seek urgent care if fever > 38°C develops']});
+    }
+  }
+  if(!isNaN(v.plt)){
+    if(s.plt==='low'){
+      d.push({name:'Thrombocytopenia',severity:'danger',why:[`Platelets ${v.plt} ×10³/µL below normal (150–400) — increased bleeding risk`,(!isNaN(v.pdw)&&v.pdw>17)?'Elevated PDW suggests high platelet size variation — immature platelet release':'May indicate ITP, dengue fever, bone marrow suppression, or drug reaction'],
+      prevention:['Avoid aspirin, NSAIDs and anticoagulants','Urgent hematology consult if platelets < 50','Test for dengue/malaria in endemic regions','Monitor for petechiae, gum bleeding, bruising','Platelet transfusion may be needed if critically low']});
+    } else if(s.plt==='high'){
+      d.push({name:'Thrombocytosis',severity:'warning',why:[`Platelets ${v.plt} ×10³/µL above normal (150–400) — elevated clotting risk`,`May be reactive (post-surgery, infection) or essential thrombocythemia (myeloproliferative disorder)`],
+      prevention:['Low-dose aspirin as directed by physician','Stay well hydrated (2–3L water/day)','Monitor for clotting signs: leg pain, chest pain','Evaluate for myeloproliferative neoplasm','Regular CBC follow-up every month']});
+    }
+  }
+  if(!isNaN(v.hct)&&s.hct==='high'&&!isNaN(v.rbc)&&s.rbc==='high'){
+    d.push({name:'Polycythemia',severity:'warning',why:[`Hematocrit ${v.hct}% and RBC ${v.rbc} ×10⁶/µL both elevated — blood hyperviscosity`,`Increases risk of stroke, DVT; may indicate polycythemia vera or secondary causes (hypoxia, smoking)`],
+    prevention:['Therapeutic phlebotomy as prescribed','Hydration: minimum 3L water/day','Low-dose aspirin therapy','Avoid high altitude without acclimatization','JAK2 mutation testing for polycythemia vera']});
+  }
+  if(!isNaN(v.eos)&&s.eos==='high'){
+    d.push({name:'Eosinophilia',severity:'warning',why:[`Eosinophils ${v.eos}% exceeds normal (1–4%) — allergic or parasitic response activated`,`Common causes: asthma, allergic rhinitis, drug reactions, helminthic parasites`],
+    prevention:['Stool microscopy for parasites','Allergy skin test and antihistamines','Anti-helminthic therapy if parasites detected','Avoid known allergens and triggers','Consult allergist/immunologist']});
+  }
+  if(!isNaN(v.lym)&&s.lym==='high'){
+    d.push({name:'Lymphocytosis',severity:'warning',why:[`Lymphocytes ${v.lym}% exceeds normal (20–40%) — viral or lymphoproliferative response`,`Consider EBV/CMV infection, chronic lymphocytic leukemia (CLL), or lymphoma`],
+    prevention:['Monospot / EBV antibody testing','Peripheral blood smear for abnormal lymphocytes','Flow cytometry if CLL suspected','Rest, hydration for viral causes','Oncology referral if persistent > 3 months']});
+  }
+  if(d.length===0){
+    d.push({name:'All Parameters Within Normal Range',severity:'normal',why:['No significant hematological abnormalities detected','All CBC values fall within established reference ranges'],
+    prevention:['Balanced diet rich in iron, B12, folate and vitamin C','Regular exercise — 30 min/day, 5 days/week','Annual CBC health screening recommended','Stay hydrated and manage stress effectively','Avoid smoking and limit alcohol consumption']});
+  }
+  return d;
+}
+
+function renderDiagnosis(diseases){
+  document.getElementById('diagnosisContent').innerHTML=diseases.map(d=>`
+    <div class="disease-card ${d.severity}">
+      <span class="badge ${d.severity}">${d.severity==='danger'?'Critical':d.severity==='warning'?'Attention Required':'Healthy'}</span>
+      <div class="disease-name">${d.name}</div>
+      <div class="disease-why">${d.why.map(w=>`• ${w}`).join('<br/>')}</div>
+      <div style="font-size:11px;font-weight:700;color:#2d3748;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Prevention & Management</div>
+      <ul class="prev-list">${d.prevention.map(p=>`<li><i class="ti ti-shield-check"></i><span>${p}</span></li>`).join('')}</ul>
+    </div>`).join('');
+}
+
+function downloadReport(){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const W=210,M=18;let y=20;
+  doc.setFillColor(27,96,179);doc.rect(0,0,W,32,'F');
+  doc.setTextColor(255,255,255);doc.setFontSize(16);doc.setFont('helvetica','bold');
+  doc.text('CELLENIUM21 HEMATOLOGY REPORT',M,14);
+  doc.setFontSize(9);doc.setFont('helvetica','normal');
+  doc.text('Trivitron Healthcare | Automated CBC Analysis',M,21);
+  doc.text('Generated: '+new Date().toLocaleString(),M,27);
+  y=42;
+  const all=[...params,...diff,...addIdx];
+  doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(27,96,179);
+  doc.text('CBC PARAMETERS',M,y);y+=5;
+  doc.setDrawColor(27,96,179);doc.line(M,y,W-M,y);y+=6;
+  doc.setFontSize(8.5);
+  for(const p of all){
+    const v=getVal(p.id);if(isNaN(v))continue;
+    const s=v<p.min?'LOW':v>p.max?'HIGH':'NORMAL';
+    doc.setFont('helvetica','bold');doc.setTextColor(40,40,40);doc.text(p.label,M,y);
+    doc.setFont('helvetica','normal');doc.text(`${v} ${p.unit}`,80,y);
+    doc.text(`Ref: ${p.min}–${p.max}`,130,y);
+    if(s==='LOW')doc.setTextColor(200,50,50);else if(s==='HIGH')doc.setTextColor(200,100,20);else doc.setTextColor(40,160,90);
+    doc.text(s,175,y);doc.setTextColor(40,40,40);y+=6;
+    if(y>270){doc.addPage();y=20;}
+  }
+  y+=4;
+  doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(27,96,179);
+  doc.text('DIAGNOSIS & RECOMMENDATIONS',M,y);y+=5;
+  doc.line(M,y,W-M,y);y+=6;
+  document.querySelectorAll('.disease-card').forEach(c=>{
+    doc.setFont('helvetica','bold');doc.setFontSize(10);doc.setTextColor(40,40,40);
+    doc.text(c.querySelector('.disease-name').textContent,M,y);y+=6;
+    doc.setFont('helvetica','normal');doc.setFontSize(8.5);
+    const why=c.querySelector('.disease-why').textContent;
+    doc.splitTextToSize(why,W-2*M-4).forEach(l=>{doc.text(l,M+3,y);y+=5;if(y>270){doc.addPage();y=20;}});
+    y+=2;
+    doc.setFont('helvetica','bold');doc.setFontSize(8.5);doc.text('Prevention:',M,y);y+=5;
+    doc.setFont('helvetica','normal');
+    c.querySelectorAll('.prev-list li span').forEach(s=>{
+      doc.splitTextToSize('• '+s.textContent,W-2*M-4).forEach(l=>{doc.text(l,M+3,y);y+=5;if(y>270){doc.addPage();y=20;}});
+    });
+    y+=4;if(y>270){doc.addPage();y=20;}
+  });
+  doc.setFontSize(7.5);doc.setTextColor(130,130,130);
+  doc.text('This report is generated by Cellenium21 Automated Analyzer. Consult a physician for clinical decisions.',M,287);
+  doc.save('Cellenium21_CBC_Report.pdf');
+}
+
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('collapsed');}
+function toggleAbout(el){
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  el.classList.add('active');
+}
+function scrollTo(id){
+  const el=document.getElementById(id);
+  if(el&&el.style.display!=='none')el.scrollIntoView({behavior:'smooth'});
+}
+</script>
+</body>
+</html>
